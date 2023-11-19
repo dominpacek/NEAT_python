@@ -2,6 +2,10 @@ import pygame
 import numpy as np
 import random
 
+import genetic_alg
+
+
+# TODO squash all commits before pushing
 
 def generate_new_apple():
     apple_position = [random.randrange(1, 50) * 10, random.randrange(1, 50) * 10]
@@ -10,26 +14,25 @@ def generate_new_apple():
 
 def collision_with_boundaries(snake_head):
     if snake_head[0] >= 500 or snake_head[0] < 0 or snake_head[1] >= 500 or snake_head[1] < 0:
-        return 1
+        return True
     else:
-        return 0
+        return False
 
 
 def collision_with_self(snake_position):
     snake_head = snake_position[0]
     if snake_head in snake_position[1:]:
-        return 1
+        return True
     else:
-        return 0
+        return False
 
 
-def is_direction_blocked(snake_position, current_direction_vector):
-    next_step = snake_position[0] + current_direction_vector
+def snake_hit_obstacle(snake_position):
     snake_head = snake_position[0]
-    if collision_with_boundaries(snake_head) == 1 or collision_with_self(snake_position) == 1:
-        return 1
+    if collision_with_boundaries(snake_head) or collision_with_self(snake_position):
+        return True
     else:
-        return 0
+        return False
 
 
 def move_snake(snake_head, snake_position, apple_position, direction, score):
@@ -63,6 +66,29 @@ def draw_snake(snake_position):
 
 def draw_apple(display, apple_position):
     pygame.draw.rect(display, (230, 60, 0), pygame.Rect(apple_position[0], apple_position[1], 10, 10))
+
+
+def get_inputs(snake_position, apple_position):
+    snake_head = snake_position[0]
+
+    apple_x, apple_y = apple_position[0] / display_width, apple_position[1] / display_height
+
+    direction = np.array(snake_head) - np.array(snake_position[1])
+    next_position = list(snake_head + direction)
+    is_front_blocked = 1 if snake_hit_obstacle([next_position] + snake_position[0:-1]) else 0
+
+    left_position = list(np.array(snake_head + np.array([direction[1], -direction[0]])))
+
+    is_left_blocked = 1 if snake_hit_obstacle([left_position] + snake_position[0:-1]) else 0
+
+    right_position = list(np.array(snake_head + np.array([-direction[1], direction[0]])))
+    is_right_blocked = 1 if snake_hit_obstacle([right_position] + snake_position[0:-1]) else 0
+
+    direction = direction // 10
+    snake_direction_x, snake_direction_y = direction[0], direction[1]
+
+    return [apple_x, apple_y, snake_direction_x, snake_direction_y,
+            is_left_blocked, is_front_blocked, is_right_blocked]
 
 
 def display_final_score(display_text, final_score):
@@ -101,7 +127,7 @@ UP -> button_direction = 3
 '''
 
 
-def play_game(snake_head, snake_position, apple_position, nn=None, human_controlled=True, score=0, clock_speed=10):
+def play_game(snake_head, snake_position, apple_position, nn=None, human_controlled=True, clock_speed=10, score=0):
     crashed = False
     previous_direction = 1
     previous_direction_vector = np.array(snake_position[0]) - np.array(snake_position[1])
@@ -127,6 +153,8 @@ def play_game(snake_head, snake_position, apple_position, nn=None, human_control
                     new_direction = previous_direction
         if not human_controlled:
             new_direction = random.randint(0, 3)
+        inp = get_inputs(snake_position, apple_position)
+        print(inp)
 
         new_direction = pick_correct_direction(previous_direction, new_direction)
         display.fill(window_color)
@@ -141,7 +169,7 @@ def play_game(snake_head, snake_position, apple_position, nn=None, human_control
 
         previous_direction = new_direction
 
-        if is_direction_blocked(snake_position, previous_direction_vector) == 1:
+        if snake_hit_obstacle(snake_position):
             crashed = True
 
         clock.tick(clock_speed)
@@ -150,7 +178,6 @@ def play_game(snake_head, snake_position, apple_position, nn=None, human_control
 
 
 if __name__ == "__main__":
-
     # SETUP #
     display_width = 500
     display_height = 500
@@ -169,13 +196,10 @@ if __name__ == "__main__":
     pygame.display.update()
 
     # Neural network #
+    population = genetic_alg.generate_new_population()
 
-
-
-    score = play_game(head_startpos, snake_startpos, generate_new_apple(), None, False)
+    score = play_game(head_startpos, snake_startpos, generate_new_apple(), None, True, 10)
     pygame.display.update()
-
-
 
     display_text = f'Final score: {score}'
     display_final_score(display_text, score)

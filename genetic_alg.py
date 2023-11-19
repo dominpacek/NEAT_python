@@ -3,8 +3,11 @@ crossover_rate = 0.8
 mutation_rate = 0.001
 
 
-def reproduction(population):
+def generate_new_population():
+    pass
 
+
+def reproduction(population):
     pass
 
 
