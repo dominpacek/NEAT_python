@@ -73,8 +73,6 @@ def draw_apple(display, apple_position):
 def get_inputs(snake_position, apple_position):
     snake_head = snake_position[0]
 
-    apple_x, apple_y = apple_position[0] / display_width, apple_position[1] / display_height
-
     direction = np.array(snake_head) - np.array(snake_position[1])
     next_position = list(snake_head + direction)
     is_front_blocked = 1 if snake_hit_obstacle([next_position] + snake_position[0:-1]) else 0
@@ -87,27 +85,54 @@ def get_inputs(snake_position, apple_position):
     is_right_blocked = 1 if snake_hit_obstacle([right_position] + snake_position[0:-1]) else 0
 
     direction = direction // 10
-    snake_direction_x, snake_direction_y = direction[0], direction[1]
 
-    return [apple_x, apple_y, snake_direction_x, snake_direction_y,
+    return [get_angle_to_apple(snake_position, apple_position),
             is_left_blocked, is_front_blocked, is_right_blocked]
 
 
-def display_final_score(display_text, final_score):
-    largeText = pygame.font.Font('freesansbold.ttf', 35)
-    TextSurf = largeText.render(display_text, True, (0, 0, 0))
+def get_angle_to_apple(snake_position, apple_position):
+    snake_head = np.array(snake_position[0])
+    direction = np.array(snake_head) - np.array(snake_position[1])
+
+    # Calculate the vector from the snake head to the apple
+    apple_vector = np.array(apple_position) - snake_head
+
+    # Calculate the cosine of the angle between the direction and apple_vector
+    dot_product = np.dot(direction, apple_vector)
+    magnitude_direction = np.linalg.norm(direction)
+    magnitude_apple_vector = np.linalg.norm(apple_vector)
+
+    # Avoid division by zero
+    if magnitude_direction == 0 or magnitude_apple_vector == 0:
+        return 0.0
+
+    cosine_angle = dot_product / (magnitude_direction * magnitude_apple_vector)
+
+    # Calculate the angle in radians
+    angle_rad = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
+
+    # Convert angle to the range [0, 1]
+    normalized_angle = (angle_rad % (2 * np.pi)) / (2 * np.pi)
+
+    return normalized_angle
+
+
+def display_text(text, size=12, keep_opened=False, x=100, y=100):
+    largeText = pygame.font.Font('freesansbold.ttf', size)
+    TextSurf = largeText.render(text, True, (0, 0, 0))
     TextRect = TextSurf.get_rect()
-    TextRect.center = ((display_width / 2), (display_height / 2))
+
+    TextRect.center = (550, 40)
     display.blit(TextSurf, TextRect)
     pygame.display.update()
 
-    display_screen = True
-    while display_screen:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                display_screen = False
-            elif event.type == pygame.KEYDOWN:
-                display_screen = False
+    if keep_opened:
+        while keep_opened:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    keep_opened = False
+                elif event.keep_opened == pygame.KEYDOWN:
+                    display_screen = False
 
 
 # TODO enum for directions
@@ -147,8 +172,8 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, score=0):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit(1)
-            if human_controlled:
-                if event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYDOWN:
+                if human_controlled:
                     if event.key == pygame.K_LEFT:
                         new_direction = 0
                     elif event.key == pygame.K_RIGHT:
@@ -157,8 +182,16 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, score=0):
                         new_direction = 2
                     elif event.key == pygame.K_UP:
                         new_direction = 3
-                else:
-                    new_direction = previous_direction
+                if event.key == pygame.K_SPACE:
+                    paused = True
+                    while paused:
+                        for event in (events := pygame.event.get()):
+
+                            if event.type == pygame.QUIT:
+                                pygame.quit()
+                                exit(1)
+                            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                                paused = False
         if not human_controlled:
             if score == lastscore:
                 time_since_score_change += 1
@@ -175,7 +208,7 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, score=0):
         snake_position, apple_position, score = move_snake(snake_head, snake_position, apple_position,
                                                            new_direction, score)
 
-        pygame.display.set_caption("SCORE: " + str(score))
+        pygame.display.set_caption(f"SCORE: {score}, Generation {i}")
         pygame.display.update()
 
         previous_direction = new_direction
@@ -197,7 +230,6 @@ if __name__ == "__main__":
     window_color = (200, 200, 200)
     clock = pygame.time.Clock()
 
-
     # todo move pygame stuff to its class
     pygame.init()  # initialize pygame modules
 
@@ -209,7 +241,7 @@ if __name__ == "__main__":
     generations = 2000
     population_size = 50
     start = time.time()
-    inputs = 7 + 1
+    inputs = 4 + 1
     population = genetic_alg.generate_new_population(population_size, inputs, 2)
     for i in range(generations):
         # Letting each genome play the game
@@ -217,7 +249,7 @@ if __name__ == "__main__":
         print(f'Generation {i}')
         max_score = 0
         avg = 0
-        max_nodes =0
+        max_nodes = 0
         for genome in population:
             # fitness function is just score
             genome_score = play_game(genome.nn, False, 5000)
@@ -225,20 +257,21 @@ if __name__ == "__main__":
             genome.fitness = genome_score * 5000
             max_score = max(genome_score, max_score)
             avg += genome_score
+            max_nodes = max(max_nodes, len(genome.nn.neurons))
 
         avg = avg / len(population)
         end = time.time()
         print(f'took {(end - start):.2f} seconds')
         print(f'Best score: {max_score}')
         print(f'Average score: {avg:.2f}')
+        print(f'Max nodes: {max_nodes}')
 
         start = time.time()
         population = genetic_alg.next_generation(population)
 
-
     pygame.display.update()
 
-    display_text = f'Final score: {genome_score}'
-    display_final_score(display_text, genome_score)
+    text = f'Final score: {genome_score}'
+    display_text(text, 35, True, 500, 250)
 
     pygame.quit()

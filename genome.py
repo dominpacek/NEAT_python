@@ -4,6 +4,9 @@ import numpy as np
 
 
 class Genome:
+    inputs = -1
+    outputs = -1
+
     def __init__(self, inputs, outputs):
         # inputs and outputs are ints
         self.inputs = inputs
@@ -11,6 +14,10 @@ class Genome:
         self.neurons = inputs
         self.genes = []
         self.nn = None
+        if Genome.inputs == -1:
+            Genome.inputs = inputs
+        if Genome.outputs == -1:
+            Genome.outputs = outputs
 
     def add_gene(self, gene):
         self.genes.append(gene)
@@ -89,7 +96,7 @@ class NeuralNetwork:
 
     def evaluate(self, input_values):
         input_values.append(1)  # bias
-        if len(input_values) != 8 or self.inputs != 8:
+        if len(input_values) != Genome.inputs or self.inputs != Genome.inputs:
             print('Zła ilość inputów')
 
         for i in range(len(input_values)):
