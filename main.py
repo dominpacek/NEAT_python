@@ -1,6 +1,8 @@
-import pygame
-import numpy as np
 import random
+import time
+
+import numpy as np
+import pygame
 
 import genetic_alg
 
@@ -127,18 +129,24 @@ UP -> button_direction = 3
 '''
 
 
-def play_game(snake_head, snake_position, apple_position, nn=None, human_controlled=True, clock_speed=10, score=0):
+def play_game(nn=None, human_controlled=True, clock_speed=10, score=0):
     crashed = False
+    # TODO rewrite all usages to use snake_position[0] instead of snake_head
+    snake_head = [250, 250]
+    snake_position = [[250, 250], [240, 250], [230, 250]]
+    apple_position = generate_new_apple()
     previous_direction = 1
-    previous_direction_vector = np.array(snake_position[0]) - np.array(snake_position[1])
 
+    lastscore = score
+    time_since_score_change = 0
     # Main game loop
+    new_direction = previous_direction
     while crashed is not True:
         for event in (events := pygame.event.get()):
 
             if event.type == pygame.QUIT:
-                crashed = True
-                continue
+                pygame.quit()
+                exit(1)
             if human_controlled:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_LEFT:
@@ -152,15 +160,18 @@ def play_game(snake_head, snake_position, apple_position, nn=None, human_control
                 else:
                     new_direction = previous_direction
         if not human_controlled:
-            new_direction = random.randint(0, 3)
-        inp = get_inputs(snake_position, apple_position)
-        print(inp)
+            if score == lastscore:
+                time_since_score_change += 1
+                if time_since_score_change > 2500:
+                    crashed = True
+            inp = get_inputs(snake_position, apple_position)
+            out = nn.evaluate(inp)
+            new_direction = int(''.join(map(str, out)), 2)
 
         new_direction = pick_correct_direction(previous_direction, new_direction)
         display.fill(window_color)
         draw_apple(display, apple_position)
         draw_snake(snake_position)
-
         snake_position, apple_position, score = move_snake(snake_head, snake_position, apple_position,
                                                            new_direction, score)
 
@@ -179,15 +190,14 @@ def play_game(snake_head, snake_position, apple_position, nn=None, human_control
 
 if __name__ == "__main__":
     # SETUP #
+
     display_width = 500
     display_height = 500
 
     window_color = (200, 200, 200)
     clock = pygame.time.Clock()
 
-    # TODO rewrite all usages to use snake_position[0] instead of snake_head
-    head_startpos = [250, 250]
-    snake_startpos = [[250, 250], [240, 250], [230, 250]]
+
     # todo move pygame stuff to its class
     pygame.init()  # initialize pygame modules
 
@@ -196,12 +206,39 @@ if __name__ == "__main__":
     pygame.display.update()
 
     # Neural network #
-    population = genetic_alg.generate_new_population()
+    generations = 2000
+    population_size = 50
+    start = time.time()
+    inputs = 7 + 1
+    population = genetic_alg.generate_new_population(population_size, inputs, 2)
+    for i in range(generations):
+        # Letting each genome play the game
+        print()
+        print(f'Generation {i}')
+        max_score = 0
+        avg = 0
+        max_nodes =0
+        for genome in population:
+            # fitness function is just score
+            genome_score = play_game(genome.nn, False, 5000)
 
-    score = play_game(head_startpos, snake_startpos, generate_new_apple(), None, True, 10)
+            genome.fitness = genome_score * 5000
+            max_score = max(genome_score, max_score)
+            avg += genome_score
+
+        avg = avg / len(population)
+        end = time.time()
+        print(f'took {(end - start):.2f} seconds')
+        print(f'Best score: {max_score}')
+        print(f'Average score: {avg:.2f}')
+
+        start = time.time()
+        population = genetic_alg.next_generation(population)
+
+
     pygame.display.update()
 
-    display_text = f'Final score: {score}'
-    display_final_score(display_text, score)
+    display_text = f'Final score: {genome_score}'
+    display_final_score(display_text, genome_score)
 
     pygame.quit()
