@@ -1,10 +1,10 @@
 import random
 
-from genome import Genome, Gene
+from neat_genome import Genome, Gene, NeuralNetwork
 
 crossover_rate = 0.8
-connection_mutation_rate = 0.05
-node_mutation_rate = 0.03
+connection_mutation_rate = 0.3
+node_mutation_rate = 0.1
 weight_mutation_rate = 0.8
 
 
@@ -26,14 +26,14 @@ def reproduce(population):
     population = population[:(count // 2)]
 
     new_population = [population[0], population[1]]
-    #todo ruletka or something
+    # todo ruletka or something
     fit_sum = 0
     for genome in population:
         fit_sum += genome.fitness
     # for now just choose parents randomly
     while len(new_population) < count:
         if random.random() < crossover_rate:
-            parents = random.choices(population, weights=[g.fitness + 0.01 for g in population], k=2)
+            parents = random.choices(population, weights=[max(g.fitness, 0.01) for g in population], k=2)
             new_population.append(crossover(parents))
         else:
             new_population.append(random.choice(population))
@@ -62,12 +62,12 @@ def crossover(parents):
     for g in worse.genes:
         w_innovations[g.innovation] = g
 
-    child = Genome(better.inputs, better.outputs)
+    child = Genome(better.inputs, better.outputs, better.neuron_count)
     for g in better.genes:
         if g.innovation in w_innovations and random.random() < 0.5:
             child.genes.append(w_innovations[g.innovation])
         else:
-           child.genes.append(g)
+            child.genes.append(g)
 
     return child
 
@@ -76,11 +76,17 @@ def mutate(genome):
     if random.random() < weight_mutation_rate:
         mutate_weights(genome)
 
-    if random.random() < node_mutation_rate:
-        mutate_node(genome)
+    p = node_mutation_rate
+    while p > 0:
+        if random.random() < p:
+            mutate_node(genome)
+        p -= 1
 
-    if random.random() < connection_mutation_rate:
-        mutate_connection(genome)
+    p = connection_mutation_rate
+    while p > 0:
+        if random.random() < p:
+            mutate_connection(genome)
+        p -= 1
 
 
 def mutate_weights(genome):
@@ -93,17 +99,21 @@ def mutate_weights(genome):
 
 
 def mutate_connection(genome):
-    n1 = genome.random_neuron(True)
-    n2 = genome.random_neuron()
+    in_n = genome.random_neuron(True)
+    out_n = genome.random_neuron(False, True)
 
-    if n1 == n2:
+    if in_n == out_n:
         # Can't create link to self
         return
 
-    if genome.already_has_gene(n1, n2):
+    if in_n >= NeuralNetwork.max_neurons:
+        # Can't create link from output
         return
 
-    new_link = Gene(n1, n2)
+    if genome.already_has_gene(in_n, out_n):
+        return
+
+    new_link = Gene(in_n, out_n)
     genome.add_gene(new_link)
 
 
@@ -114,14 +124,20 @@ def mutate_node(genome):
     gene = random.choice(genome.genes)
     gene.enabled = False
 
-    new_neuron = genome.add_neuron()
+    new_neuron = genome.get_new_neuron_id()
+    if new_neuron == gene.input:
+        print("Error: mutate_node INPUT same as new neuron")
+    if new_neuron == gene.output:
+        print("Error: mutate_node OUTPUT same as new neuron")
     genome.add_gene(Gene(gene.input, new_neuron))
     genome.add_gene(Gene(new_neuron, gene.output, gene.weight))
+
 
 def next_generation(population):
     new_population = reproduce(population)
 
-    for genome in new_population:
+    # keep 1 best genome unchanged
+    for genome in new_population[1:]:
         mutate(genome)
         genome.generate_nn()
 
