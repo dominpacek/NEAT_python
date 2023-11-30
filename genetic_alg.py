@@ -102,6 +102,8 @@ def mutate_weights(genome):
 def mutate_connection(genome):
     in_n = genome.random_neuron(True)
     out_n = genome.random_neuron(False, True)
+    # todo make sure recurrent connections are not allowed
+    # (or make it a toggle)
 
     if in_n == out_n:
         # Can't create link to self
@@ -125,13 +127,13 @@ def mutate_node(genome):
     gene = random.choice(genome.genes)
     gene.enabled = False
 
-    new_neuron = genome.get_new_neuron_id()
-    if new_neuron == gene.input:
+    new_node = genome.get_new_neuron_id()
+    if new_node == gene.input:
         print("Error: mutate_node INPUT same as new neuron")
-    if new_neuron == gene.output:
+    if new_node == gene.output:
         print("Error: mutate_node OUTPUT same as new neuron")
-    genome.add_gene(Gene(gene.input, new_neuron))
-    genome.add_gene(Gene(new_neuron, gene.output, gene.weight))
+    genome.add_gene(Gene(gene.input, new_node, 1))
+    genome.add_gene(Gene(new_node, gene.output, gene.weight))
 
 
 def next_generation(population):
