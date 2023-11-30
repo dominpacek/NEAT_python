@@ -7,8 +7,6 @@ import pygame
 import genetic_alg
 
 
-# TODO squash all commits before pushing
-
 def generate_new_apple():
     apple_position = [random.randrange(1, display_width // 10) * 10, random.randrange(1, display_height // 10) * 10]
     return apple_position
@@ -236,7 +234,8 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, snake_color=(0, 12
             out = nn.evaluate(inp)
             if out != last_out:
                 directions_changed += 1
-            if snake_color != (0, 120, 0):
+            debug = True
+            if debug and snake_color != (0, 120, 0):
                 print(out)
             decision = np.argmax(out)
             if decision == 0:
@@ -245,7 +244,6 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, snake_color=(0, 12
                 new_direction = turn_left(previous_direction)
             else:
                 new_direction = turn_right(previous_direction)
-        get_angle_to_apple(snake_position, apple_position)
         display.fill(window_color)
         draw_apple(display, apple_position)
         draw_snake(snake_position, snake_color)
@@ -253,7 +251,7 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, snake_color=(0, 12
                                                            new_direction, score)
         if lastscore != score:
             # Snake ate an apple
-            fitness += 5000
+            fitness += 50000
             lastscore = score
 
         pygame.display.set_caption(f"SCORE: {score}, Gen {i}, ch:{directions_changed}")
@@ -262,6 +260,7 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, snake_color=(0, 12
         previous_direction = new_direction
 
         if snake_hit_obstacle(snake_position):
+            #fitness -= 1000
             crashed = True
 
         clock.tick(clock_speed)
@@ -291,13 +290,13 @@ if __name__ == "__main__":
 
     # Neural network #
     generations = 2000
-    population_size = 200
+    population_size = 100
     start = time.time()
     inputs = 7 + 1
     population = genetic_alg.generate_new_population(population_size, inputs, 3)
     i = 0
     best = 0
-    # play_game(None, True)
+    #play_game(None, True)
     while True:
         i += 1
         # Letting each genome play the game
@@ -330,7 +329,7 @@ if __name__ == "__main__":
         print(f'Max nodes: {max_nodes}')
         print(f'Max connections: {connections}')
 
-        draw_graphs = True
+        draw_graphs = False
         draw_every_n = 1
         if draw_graphs and i % draw_every_n == 0:
             best_genome_pop.nn.draw_graph()

@@ -60,7 +60,6 @@ class Genome:
                 if i >= NeuralNetwork.max_neurons:
                     print("Error: random_neuron returned OUTPUT when not allowed")
 
-
         neuron = np.random.choice(list(neurons.keys()))
         return neuron
 
@@ -121,6 +120,32 @@ class NeuralNetwork:
                 if gene.input not in self.neurons:
                     self.neurons[gene.input] = Neuron(gene.input)
 
+    def evaluate(self, input_values):
+        input_values.append(1)  # bias
+        if len(input_values) != Genome.inputs or self.inputs != Genome.inputs:
+            print('Zła ilość inputów')
+
+        for i in range(len(input_values)):
+            self.neurons[i].value = input_values[i]
+
+        for neuron_id in self.neurons:
+            inputs_sum = 0
+            for incoming in self.neurons[neuron_id].incoming:
+                inputs_sum += incoming.weight * self.neurons[incoming.input].value
+
+            if len(self.neurons[neuron_id].incoming):
+                self.neurons[neuron_id].value = steep_sigmoid(inputs_sum)
+
+        output = []
+        for i in range(self.outputs):
+            output.append(self.neurons[NeuralNetwork.max_neurons + i].value)
+            # if self.neurons[NeuralNetwork.max_neurons + i].value > 0.5:
+            #     output.append(1)
+            # else:
+            #     output.append(0)
+
+        return output
+
     def draw_graph(self):
         G = nx.DiGraph()
 
@@ -157,32 +182,6 @@ class NeuralNetwork:
 
         plt.show(block=False)
         plt.pause(0.0001)
-
-    def evaluate(self, input_values):
-        input_values.append(1)  # bias
-        if len(input_values) != Genome.inputs or self.inputs != Genome.inputs:
-            print('Zła ilość inputów')
-
-        for i in range(len(input_values)):
-            self.neurons[i].value = input_values[i]
-
-        for neuron_id in self.neurons:
-            inputs_sum = 0
-            for incoming in self.neurons[neuron_id].incoming:
-                inputs_sum += incoming.weight * self.neurons[incoming.input].value
-
-            if inputs_sum > 0:
-                self.neurons[neuron_id].value = steep_sigmoid(inputs_sum)
-
-        output = []
-        for i in range(self.outputs):
-            output.append(self.neurons[NeuralNetwork.max_neurons + i].value)
-            # if self.neurons[NeuralNetwork.max_neurons + i].value > 0.5:
-            #     output.append(1)
-            # else:
-            #     output.append(0)
-
-        return output
 
 
 def steep_sigmoid(x):

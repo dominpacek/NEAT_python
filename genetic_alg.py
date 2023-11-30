@@ -1,3 +1,4 @@
+import copy
 import random
 
 from neat_genome import Genome, Gene, NeuralNetwork
@@ -36,7 +37,7 @@ def reproduce(population):
             parents = random.choices(population, weights=[max(g.fitness, 0.01) for g in population], k=2)
             new_population.append(crossover(parents))
         else:
-            new_population.append(random.choice(population))
+            new_population.append(copy.deepcopy(random.choice(population)))
 
     types = {}
     for g in new_population:
@@ -65,9 +66,9 @@ def crossover(parents):
     child = Genome(better.inputs, better.outputs, better.neuron_count)
     for g in better.genes:
         if g.innovation in w_innovations and random.random() < 0.5:
-            child.genes.append(w_innovations[g.innovation])
+            child.genes.append(copy.copy(w_innovations[g.innovation]))
         else:
-            child.genes.append(g)
+            child.genes.append(copy.copy(g))
 
     return child
 
