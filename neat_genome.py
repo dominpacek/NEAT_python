@@ -74,10 +74,11 @@ class Genome:
 
 
 class Neuron:
-    def __init__(self, id):
+    def __init__(self, neuron_id):
         self.value = 0
-        self.id = id
+        self.id = neuron_id
         self.incoming = []
+        # TODO add layer info
 
 
 class Gene:

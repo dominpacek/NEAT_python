@@ -244,7 +244,7 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, generation=0, snak
             out = nn.evaluate(inp)
             if out != last_out:
                 directions_changed += 1
-            debug = True
+            debug = False
             if debug and snake_color != (0, 120, 0):
                 print(out)
             decision = np.argmax(out)

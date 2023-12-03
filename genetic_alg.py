@@ -7,6 +7,7 @@ crossover_rate = 0.8
 connection_mutation_rate = 0.3
 node_mutation_rate = 0.1
 weight_mutation_rate = 0.8
+inherited_gene_disable_rate = 0.75
 
 
 def generate_new_population(count, inputs, outputs):
@@ -59,16 +60,29 @@ def crossover(parents):
     else:
         worse, better = parents
 
-    w_innovations = {}
-    for g in worse.genes:
-        w_innovations[g.innovation] = g
+    w_genes = {}
+    w_disabled = {}
+    for gene in worse.genes:
+        w_genes[gene.innovation] = gene
+        if not gene.enabled:
+            w_disabled[gene.innovation] = True
 
     child = Genome(better.inputs, better.outputs, better.neuron_count)
-    for g in better.genes:
-        if g.innovation in w_innovations and random.random() < 0.5:
-            child.genes.append(copy.copy(w_innovations[g.innovation]))
+    for gene in better.genes:
+        enable_new = True
+
+        # if gene is disabled in either parent
+        if gene.innovation in w_disabled or not gene.enabled:
+            if random.random() < inherited_gene_disable_rate:
+                enable_new = False
+
+        if gene.innovation in w_genes and random.random() < 0.5:
+            # genes matching in both parents are randomly chosen
+            offspring_gene = copy.copy(w_genes[gene.innovation])
         else:
-            child.genes.append(copy.copy(g))
+            offspring_gene = (copy.copy(gene))
+        offspring_gene.enabled = enable_new
+        child.genes.append(offspring_gene)
 
     return child
 
