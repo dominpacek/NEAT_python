@@ -4,16 +4,15 @@ from snake import play_game
 
 if __name__ == "__main__":
 
-
-    # Neural network #
+    # Neural network parameters
     generations = 2000
     population_size = 100
     start = time.time()
-    inputs = 7 + 1
+    inputs = 5 + 1  # the 1 is for bias
     population = genetic_alg.generate_new_population(population_size, inputs, 3)
     i = 0
     best = 0
-    #play_game(None, True)
+    #play_game(None, True, 5)
     while True:
         i += 1
         # Letting each genome play the game
@@ -25,7 +24,6 @@ if __name__ == "__main__":
         max_nodes = 0
         connections = 0
         for genome in population:
-            # fitness function is just score
             genome_score, fitness = play_game(genome.nn, False, 50000, i)
 
             genome.fitness = fitness
@@ -54,7 +52,7 @@ if __name__ == "__main__":
 
         show_best = True
         if show_best:
-            play_game(best_genome_pop.nn, False, 20, f"{i} (best)", (50, 50, 230))
+            play_game(best_genome_pop.nn, False, 50, f"{i} (best)", (50, 50, 230))
 
         start = time.time()
         population = genetic_alg.next_generation(population)

@@ -6,7 +6,7 @@ import pygame
 # SETUP #
 
 display_width = 30 * 10
-display_height = 30 * 10
+display_height = display_width
 
 window_color = (200, 200, 200)
 clock = pygame.time.Clock()
@@ -16,6 +16,7 @@ pygame.init()  # initialize pygame modules
 display = pygame.display.set_mode((display_width, display_height))
 display.fill(window_color)
 pygame.display.update()
+
 
 def generate_new_apple():
     apple_position = [random.randrange(1, display_width // 10) * 10, random.randrange(1, display_height // 10) * 10]
@@ -82,55 +83,65 @@ def get_inputs(snake_position, apple_position):
     snake_head = snake_position[0]
 
     direction = np.array(snake_head) - np.array(snake_position[1])
+    # direction = direction // 10
+    # format: [left/right, up/down]
+    # [-1, 0] - left, [1, 0] - right
+    # [0, -1] - up, [0, 1] - down
+
+    left_dir = np.array([direction[1], -direction[0]])
+    right_dir = -left_dir
+
+    # Get blocked direction info
     next_position = list(snake_head + direction)
     is_front_blocked = 1 if snake_hit_obstacle([next_position] + snake_position[0:-1]) else 0
 
-    left_position = list(np.array(snake_head + np.array([direction[1], -direction[0]])))
-
+    left_position = list(np.array(snake_head + left_dir))
     is_left_blocked = 1 if snake_hit_obstacle([left_position] + snake_position[0:-1]) else 0
 
-    right_position = list(np.array(snake_head + np.array([-direction[1], direction[0]])))
+    right_position = list(np.array(snake_head + right_dir))
     is_right_blocked = 1 if snake_hit_obstacle([right_position] + snake_position[0:-1]) else 0
 
-    direction = direction // 10
+    # Get distance to apple info
+    head_to_apple = np.array(apple_position) - np.array(snake_head)
 
-    x_apple_to_snake = apple_position[0] - snake_head[0]
-    y_apple_to_snake = apple_position[1] - snake_head[1]
-    x_snake = snake_head[0]
-    y_snake = snake_head[1]
+    front_index = np.where(direction != 0)[0][0]
+    left_index = (front_index + 1) % 2
 
-    # normalize
-    x_apple_to_snake = x_apple_to_snake / display_width
-    y_apple_to_snake = y_apple_to_snake / display_height
-    x_snake = x_snake / display_width
-    y_snake = y_snake / display_height
+    steps_ahead_to_apple = (head_to_apple[front_index] / direction[front_index])
+    steps_left_to_apple = (head_to_apple[left_index] / left_dir[left_index])
 
-    result = [x_apple_to_snake, y_apple_to_snake, x_snake, y_snake,
+    # Normalize to the range [-1, 1]
+    # display_width = display_height, but if it changes, this will break
+    steps_ahead_to_apple = steps_ahead_to_apple / display_width
+    steps_left_to_apple = steps_left_to_apple / display_height
+
+    # Return the inputs
+    result = [steps_ahead_to_apple, steps_left_to_apple,
               is_left_blocked, is_front_blocked, is_right_blocked]
 
     return result
 
 
-def get_angle_to_apple(snake_position, apple_position):
-    snake_head = np.array(snake_position[0])
-    direction = np.array(snake_head) - np.array(snake_position[1])
-
-    # Calculate the vector from the snake head to the apple
-    apple_vector = np.array(apple_position) - snake_head
-
-    # Calculate the cosine of the angle between the vectors
-    cosine_angle = np.dot(apple_vector, direction) / (np.linalg.norm(direction) * np.linalg.norm(apple_vector))
-
-    # Calculate the angle in radians
-    angle_rad = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
-
-    # Map the angle to the range [-π, π]
-    angle_mapped = (angle_rad % (2 * np.pi)) - np.pi
-
-    # Normalize to the range [-1, 1]
-    normalized_angle = angle_mapped / np.pi + 1
-
-    return normalized_angle
+# def get_angle_to_apple(snake_position, apple_position):
+#     snake_head = np.array(snake_position[0])
+#     direction = np.array(snake_head) - np.array(snake_position[1])
+#
+#     # Calculate the vector from the snake head to the apple
+#     apple_vector = np.array(apple_position) - snake_head
+#
+#     # Calculate the cosine of the angle between the vectors
+#     cosine_angle = np.dot(apple_vector, direction) / (np.linalg.norm(direction) * np.linalg.norm(apple_vector))
+#
+#     # Calculate the angle in radians
+#     angle_rad = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
+#
+#     # Map the angle to the range [-π, π]
+#     angle_mapped = (angle_rad % (2 * np.pi)) - np.pi
+#
+#     # Normalize to the range [-1, 1]
+#     normalized_angle = angle_mapped / np.pi + 1
+#
+#     return normalized_angle
 
 
 # def display_text(text, size=12, keep_opened=False, x=100, y=100):
@@ -263,6 +274,7 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, generation=0, snak
             # Snake ate an apple
             fitness += 50000
             lastscore = score
+            time_since_score_change = 0
 
         pygame.display.set_caption(f"SCORE: {score}, Gen {generation}, ch:{directions_changed}")
         pygame.display.update()
@@ -270,7 +282,7 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, generation=0, snak
         previous_direction = new_direction
 
         if snake_hit_obstacle(snake_position):
-            fitness -= 1000
+            fitness -= 10000
             crashed = True
 
         clock.tick(clock_speed)
