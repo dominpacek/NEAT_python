@@ -206,7 +206,6 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, generation=0, snak
     apple_position = generate_new_apple()
     previous_direction = 1
     last_out = [0, 0, 0]
-    directions_changed = 0
     fitness = 0
     starting_distance = get_dist_to_apple(snake_position, apple_position)
 
@@ -253,8 +252,6 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, generation=0, snak
                     crashed = True
             inp = get_inputs(snake_position, apple_position)
             out = nn.evaluate(inp)
-            if out != last_out:
-                directions_changed += 1
             debug = False
             if debug and snake_color != (0, 120, 0):
                 print(out)
@@ -272,17 +269,17 @@ def play_game(nn=None, human_controlled=True, clock_speed=10, generation=0, snak
                                                            new_direction, score)
         if lastscore != score:
             # Snake ate an apple
-            fitness += 50000
+            fitness += 5000
             lastscore = score
             time_since_score_change = 0
 
-        pygame.display.set_caption(f"SCORE: {score}, Gen {generation}, ch:{directions_changed}")
+        pygame.display.set_caption(f"SCORE: {score}, Gen {generation}")
         pygame.display.update()
 
         previous_direction = new_direction
 
         if snake_hit_obstacle(snake_position):
-            fitness -= 10000
+            fitness -= 25000
             crashed = True
 
         clock.tick(clock_speed)

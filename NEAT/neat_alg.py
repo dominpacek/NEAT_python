@@ -1,21 +1,36 @@
 import copy
 import random
 
-from neat_genome import Genome, Gene, NeuralNetwork
+from NEAT.neat_genome import NeatGenome, ConnectionGene, NeuralNetwork
 
 crossover_rate = 0.8
 connection_mutation_rate = 0.3
 node_mutation_rate = 0.1
 weight_mutation_rate = 0.8
 inherited_gene_disable_rate = 0.75
+weight_perturb_rate = 0.9
+
+# Used to assign the same innovation number to reoccurring mutations
+# keys are tuples (in_node, out_node), values are innovation numbers
+# e.g. {(1, 2): 1, (2, 3): 2}
+new_connections_this_generation = {}
+new_nodes_this_generation = {}
 
 
-def generate_new_population(count, inputs, outputs):
+def generate_new_population(count, inputs, outputs, connected=False):
     population = []
 
     for i in range(count):
-        g = Genome(inputs, outputs)
-        mutate(g)
+        g = NeatGenome(inputs, outputs)
+        if connected:
+            genes = []
+            for j in range(inputs):
+                for k in range(outputs):
+                    w = random.uniform(-1, 1)
+                    genes.append(ConnectionGene(j, NeuralNetwork.max_neurons + k, weight=w))
+            g.connection_genes = copy.copy(genes)
+        else:
+            mutate(g)
         population.append(g)
     for genome in population:
         genome.generate_nn()
@@ -28,11 +43,10 @@ def reproduce(population):
     population = population[:(count // 2)]
 
     new_population = [population[0], population[1]]
-    # todo ruletka or something
     fit_sum = 0
     for genome in population:
         fit_sum += genome.fitness
-    # for now just choose parents randomly
+
     while len(new_population) < count:
         if random.random() < crossover_rate:
             parents = random.choices(population, weights=[max(g.fitness, 0.01) for g in population], k=2)
@@ -62,13 +76,13 @@ def crossover(parents):
 
     w_genes = {}
     w_disabled = {}
-    for gene in worse.genes:
+    for gene in worse.connection_genes:
         w_genes[gene.innovation] = gene
         if not gene.enabled:
             w_disabled[gene.innovation] = True
 
-    child = Genome(better.inputs, better.outputs, better.neuron_count)
-    for gene in better.genes:
+    child = NeatGenome(better.input_count, better.output_count)
+    for gene in better.connection_genes:
         enable_new = True
 
         # if gene is disabled in either parent
@@ -82,7 +96,7 @@ def crossover(parents):
         else:
             offspring_gene = (copy.copy(gene))
         offspring_gene.enabled = enable_new
-        child.genes.append(offspring_gene)
+        child.connection_genes.append(offspring_gene)
 
     return child
 
@@ -105,8 +119,8 @@ def mutate(genome):
 
 
 def mutate_weights(genome):
-    for gene in genome.genes:
-        if random.random() < 0.1:
+    for gene in genome.connection_genes:
+        if random.random() < weight_perturb_rate:
             gene.weight += random.uniform(0.1, 0.1)
             gene.weight = min(1, max(-1, gene.weight))
         else:
@@ -114,6 +128,8 @@ def mutate_weights(genome):
 
 
 def mutate_connection(genome):
+    global new_connections_this_generation
+
     in_n = genome.random_neuron(True)
     out_n = genome.random_neuron(False, True)
     # todo make sure recurrent connections are not allowed
@@ -130,27 +146,37 @@ def mutate_connection(genome):
     if genome.already_has_gene(in_n, out_n):
         return
 
-    new_link = Gene(in_n, out_n)
-    genome.add_gene(new_link)
+    if (in_n, out_n) in new_connections_this_generation:
+        # this innovation already occurred in this generation
+        new_link = ConnectionGene(in_n, out_n, innovation=new_connections_this_generation[(in_n, out_n)])
+    else:
+        new_link = ConnectionGene(in_n, out_n)
+        new_connections_this_generation[(in_n, out_n)] = new_link.innovation
+
+    genome.add_connection(new_link)
 
 
 def mutate_node(genome):
-    if len(genome.genes) == 0:
+    if len(genome.connection_genes) == 0:
         return
 
-    gene = random.choice(genome.genes)
+    gene = random.choice(genome.connection_genes)
     gene.enabled = False
 
     new_node = genome.get_new_neuron_id()
     if new_node == gene.input:
         print("Error: mutate_node INPUT same as new neuron")
     if new_node == gene.output:
-        print("Error: mutate_node OUTPUT same as new neuron")
-    genome.add_gene(Gene(gene.input, new_node, 1))
-    genome.add_gene(Gene(new_node, gene.output, gene.weight))
+        print(f"Error: mutate_node OUTPUT {gene.output} same as new neuron {new_node}")
+
+    # if ()
+    genome.add_connection(ConnectionGene(gene.input, new_node, 1))
+    genome.add_connection(ConnectionGene(new_node, gene.output, gene.weight))
 
 
 def next_generation(population):
+    global new_connections_this_generation
+    new_connections_this_generation = {}
     new_population = reproduce(population)
 
     # keep 1 best genome unchanged

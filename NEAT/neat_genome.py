@@ -1,60 +1,57 @@
 import random
-import networkx as nx
+
 import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 
 
-class Genome:
-    inputs = -1
-    outputs = -1
+class NeatGenome:
+    input_count = -1
+    output_count = -1
+    _Neuron_innovation = -1
 
-    def __init__(self, inputs, outputs, neuron_count=None):
-        # inputs and outputs are ints
-        self.inputs = inputs
-        self.outputs = outputs
-        if neuron_count is None:
-            self.neuron_count = inputs
-        else:
-            self.neuron_count = neuron_count
-        self.genes = []
+    def __init__(self, input_count, output_count):
+        self.input_count = input_count
+        self.output_count = output_count
+        self.species = 0  # TODO
+
+        self.connection_genes = []
+        NeatGenome._Neuron_innovation = input_count - 1
         self.nn = None
-        if Genome.inputs == -1:
-            Genome.inputs = inputs
-        elif Genome.inputs != inputs:
+        if NeatGenome.input_count == -1:
+            NeatGenome.input_count = input_count
+        elif NeatGenome.input_count != input_count:
             print('Zła ilość inputów w genomie')
-        if Genome.outputs == -1:
-            Genome.outputs = outputs
-        elif Genome.outputs != outputs:
+        if NeatGenome.output_count == -1:
+            NeatGenome.output_count = output_count
+        elif NeatGenome.output_count != output_count:
             print('Zła ilość outputów w genomie')
 
-    def add_gene(self, gene):
-        if gene.input >= self.neuron_count or (self.neuron_count <= gene.output < NeuralNetwork.max_neurons):
-            print('Error: gene input or output out of range')
-            print(f'    input: {gene.input}, output: {gene.output}, neuron_count: {self.neuron_count}')
-        self.genes.append(gene)
+    def add_connection(self, gene):
+        self.connection_genes.append(gene)
 
     def get_new_neuron_id(self):
-        self.neuron_count += 1
-        return self.neuron_count - 1
+        NeatGenome._Neuron_innovation += 1
+        return NeatGenome._Neuron_innovation
 
     def random_neuron(self, inputs_allowed=False, outputs_allowed=False):
         neurons = {}
         if inputs_allowed:
-            for i in range(self.inputs):
+            for i in range(self.input_count):
                 neurons[i] = True
         if outputs_allowed:
-            for o in range(self.outputs):
+            for o in range(self.output_count):
                 neurons[NeuralNetwork.max_neurons + o] = True
-        for gene in self.genes:
-            if self.inputs <= gene.input < NeuralNetwork.max_neurons:
+        for gene in self.connection_genes:
+            if self.input_count <= gene.input < NeuralNetwork.max_neurons:
                 neurons[gene.input] = True
-            if self.inputs <= gene.output < NeuralNetwork.max_neurons:
+            if self.input_count <= gene.output < NeuralNetwork.max_neurons:
                 neurons[gene.output] = True
 
         # Error checking
         for i in list(neurons.keys()):
             if not inputs_allowed:
-                if i < self.inputs:
+                if i < self.input_count:
                     print("Error: random_neuron returned INPUT when not allowed")
             if not outputs_allowed:
                 if i >= NeuralNetwork.max_neurons:
@@ -67,34 +64,53 @@ class Genome:
         self.nn = NeuralNetwork(self)
 
     def already_has_gene(self, input, output):
-        for gene in self.genes:
+        for gene in self.connection_genes:
             if gene.input == input and gene.output == output:
                 return True
         return False
 
 
-class Neuron:
-    def __init__(self, neuron_id):
-        self.value = 0
-        self.id = neuron_id
-        self.incoming = []
-        # TODO add layer info
+# class NodeType(Enum):
+#     INPUT = 0
+#     OUTPUT = 1
+#     HIDDEN = 2
+#
+#
+# class NodeGene:
+#     _Innovation = 0
+#
+#     def __init__(self, node_type=NodeType.HIDDEN, innovation=None):
+#         self.type = node_type
+#         if innovation is not None:
+#             self.innovation = innovation
+#         else:
+#             NodeGene._Innovation += 1
+#             self.innovation = NodeGene._Innovation
 
 
-class Gene:
+class ConnectionGene:
     _Innovation = 0
 
-    def __init__(self, input, output, weight=random.random(), increase_innovation=True, enabled=True):
+    def __init__(self, input, output, weight=random.uniform(-1, 1), enabled=True, innovation=None):
         if input == output:
             print('Error: self loop connection')
         self.input = input
         self.output = output
         self.weight = weight
         self.enabled = enabled
-        if increase_innovation:
-            Gene._Innovation += 1
-            # ? not sure about this if statement
-        self.innovation = Gene._Innovation
+        if innovation is not None:
+            self.innovation = innovation
+        else:
+            ConnectionGene._Innovation += 1
+            self.innovation = ConnectionGene._Innovation
+
+
+class NN_Neuron:
+
+    def __init__(self, neuron_id):
+        self.value = 0
+        self.id = neuron_id
+        self.incoming = []
 
 
 class NeuralNetwork:
@@ -102,28 +118,28 @@ class NeuralNetwork:
 
     def __init__(self, genome):
         self.neurons = {}
-        self.inputs = genome.inputs
-        self.outputs = genome.outputs
+        self.inputs = genome.input_count
+        self.outputs = genome.output_count
 
-        for i in range(genome.inputs):
-            self.neurons[i] = Neuron(i)
-        for o in range(genome.outputs):
-            self.neurons[NeuralNetwork.max_neurons + o] = Neuron(NeuralNetwork.max_neurons + o)
+        for i in range(genome.input_count):
+            self.neurons[i] = NN_Neuron(i)
+        for o in range(genome.output_count):
+            self.neurons[NeuralNetwork.max_neurons + o] = NN_Neuron(NeuralNetwork.max_neurons + o)
 
-        sorted_genes = sorted(genome.genes, key=lambda g: g.output)
+        sorted_genes = sorted(genome.connection_genes, key=lambda g: g.output)
         for gene in sorted_genes:
             if gene.input > NeuralNetwork.max_neurons:
                 print('Error: Output acting as input')
             if gene.enabled:
                 if gene.output not in self.neurons:
-                    self.neurons[gene.output] = Neuron(gene.output)
+                    self.neurons[gene.output] = NN_Neuron(gene.output)
                 self.neurons[gene.output].incoming.append(gene)
                 if gene.input not in self.neurons:
-                    self.neurons[gene.input] = Neuron(gene.input)
+                    self.neurons[gene.input] = NN_Neuron(gene.input)
 
     def evaluate(self, input_values):
         input_values.append(1)  # bias
-        if len(input_values) != Genome.inputs or self.inputs != Genome.inputs:
+        if len(input_values) != NeatGenome.input_count or self.inputs != NeatGenome.input_count:
             print('Zła ilość inputów')
 
         for i in range(len(input_values)):
@@ -140,14 +156,11 @@ class NeuralNetwork:
         output = []
         for i in range(self.outputs):
             output.append(self.neurons[NeuralNetwork.max_neurons + i].value)
-            # if self.neurons[NeuralNetwork.max_neurons + i].value > 0.5:
-            #     output.append(1)
-            # else:
-            #     output.append(0)
 
         return output
 
     def draw_graph(self):
+        plt.clf()
         G = nx.DiGraph()
 
         input_neurons = [neuron_id for neuron_id in self.neurons if neuron_id < self.inputs]
