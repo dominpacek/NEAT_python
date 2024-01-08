@@ -69,6 +69,15 @@ class NeatGenome:
                 return True
         return False
 
+    def generate_graph_data(self):
+        data = {'fields': ['input', 'output', 'weight'],
+                'rows': []}
+
+        for gene in self.connection_genes:
+            if gene.enabled:
+                data['rows'].append([gene.input, gene.output, gene.weight])
+        return data
+
 
 # class NodeType(Enum):
 #     INPUT = 0
@@ -159,7 +168,7 @@ class NeuralNetwork:
 
         return output
 
-    def draw_graph(self):
+    def draw_graph(self, pause=False):
         plt.clf()
         G = nx.DiGraph()
 
@@ -186,15 +195,29 @@ class NeuralNetwork:
         pos = nx.get_node_attributes(G, 'pos')
         node_labels = {node: data['label'] for node, data in G.nodes(data=True)}
         edge_colors = nx.get_edge_attributes(G, 'color')
-        labels = nx.get_edge_attributes(G, 'label')
+
+        # Calculate midpoint for each edge and adjust the label position
+        for edge in G.edges():
+            x1, y1 = pos[edge[0]]
+            x2, y2 = pos[edge[1]]
+            mid_x = (2 * x1 + x2) / 3
+            mid_y = (2 * y1 + y2) / 3
+            pos[edge] = (mid_x, mid_y)
 
         edge_color_list = [edge_colors[edge] for edge in G.edges()]
         nx.draw(G, pos, with_labels=False, node_size=500, node_color='skyblue', font_size=8, edge_color=edge_color_list)
-        nx.draw_networkx_edge_labels(G, pos, edge_labels=labels, font_color='red', font_size=8)
+
+        # Draw edge labels at the adjusted positions
+        edge_labels = nx.get_edge_attributes(G, 'label')
+        for edge, label in edge_labels.items():
+            x, y = pos[edge[0]]
+            x_offset = 0.2  # Adjust this offset according to your preference
+            plt.text(x + x_offset, y, label, color='red', fontsize=8, ha='center', va='center')
+
         nx.draw_networkx_labels(G, pos, labels=node_labels, font_size=8, verticalalignment="center",
                                 horizontalalignment="left")
 
-        plt.show(block=False)
+        plt.show(block=pause)
         plt.pause(0.0001)
 
 

@@ -51,13 +51,13 @@ def play_game_with_standard(population_size, generations=-1):
     return result_data
 
 
-def play_game_with_NEAT(population_size, generations=-1):
+def play_game_with_NEAT(population_size, generations=-1, connected=True):
     result_data = {'fields': ['generation', 'best_score', 'avg_score', 'max_nodes', 'max_connections', 'species'],
                    'rows': []}
 
     start = time.time()
     inputs = 5 + 1  # 5 inputs + 1 bias
-    population = neat_alg.generate_new_population(population_size, inputs, 3, True)
+    population = neat_alg.generate_new_population(population_size, inputs, 3, connected=connected)
     i = 0
     best = 0
     best_genome = population[0]
@@ -114,6 +114,6 @@ def play_game_with_NEAT(population_size, generations=-1):
         start = time.time()
         population = neat_alg.next_generation(population)
 
-    best_genome.nn.draw_graph()
-
+    # best_genome.nn.draw_graph()
+    result_data['best_genome'] = best_genome
     return result_data
