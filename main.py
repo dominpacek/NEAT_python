@@ -20,9 +20,9 @@ def save_results(file_name, fields, rows):
 if __name__ == "__main__":
     # results_std = play_game_with_standard(population_size, generations)
     # save_results("standard.csv", results_std['fields'], results_std['rows'])
-
     results_neat_connected = play_game_with_NEAT(population_size, generations)
 
+    # todo fix the line endings, and make a separate class for the save_results function
     results_neat_disconnected = play_game_with_NEAT(population_size, generations, False)
 
     save_results("neat_connected.csv", results_neat_connected['fields'], results_neat_connected['rows'])
