@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 
-from standard_genetic.genetic_parameters import *
+from simple_alg.genetic_parameters import *
 
 
 class Genome:
@@ -36,7 +36,7 @@ class Genome:
 def mutate_weight(weight):
     if random.random() < mutation_rate:
         if random.random() < weight_perturb_rate:
-            weight += random.uniform(0.1, 0.1)
+            weight += random.uniform(-0.1, 0.1)
             return min(1, max(-1, weight))
         else:
             return random.uniform(-1, 1)
@@ -46,6 +46,7 @@ def mutate_weight(weight):
 
 class NeuralNetwork:
 
+    # coś nie działa dla innej liczby warstw
     def __init__(self, input_size, output_size, hidden_layers=1, hidden_layer_size=10):
 
         if input_size == 0 and output_size == 0:

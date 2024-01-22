@@ -1,15 +1,8 @@
 import copy
 
-from standard_genetic.genome import *
+from simple_alg.genome import *
 
-# Used to assign the same innovation number to reoccurring mutations
-# keys are tuples (in_node, out_node), values are innovation numbers
-# e.g. {(1, 2): 1, (2, 3): 2}
-new_connections_this_generation = {}
-new_nodes_this_generation = {}
-
-
-def generate_new_population(count, inputs, outputs, connected=False):
+def generate_new_population(count, inputs, outputs):
     population = []
 
     for i in range(count):

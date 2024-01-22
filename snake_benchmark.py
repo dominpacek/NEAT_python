@@ -79,7 +79,7 @@ def draw_apple(display, apple_position):
     pygame.draw.rect(display, (230, 60, 0), pygame.Rect(apple_position[0], apple_position[1], 10, 10))
 
 
-def get_inputs(snake_position, apple_position):
+def  get_inputs(snake_position, apple_position):
     snake_head = snake_position[0]
 
     direction = np.array(snake_head) - np.array(snake_position[1])

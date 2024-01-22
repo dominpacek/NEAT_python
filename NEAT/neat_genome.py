@@ -69,7 +69,7 @@ class NeatGenome:
                 return True
         return False
 
-    def generate_graph_data(self):
+    def generate_network_graph_data(self):
         data = {'fields': ['input', 'output', 'weight'],
                 'rows': []}
 
@@ -119,7 +119,7 @@ class NN_Neuron:
     def __init__(self, neuron_id):
         self.value = 0
         self.id = neuron_id
-        self.incoming = []
+        self.input_genes = []
 
 
 class NeuralNetwork:
@@ -142,7 +142,7 @@ class NeuralNetwork:
             if gene.enabled:
                 if gene.output not in self.neurons:
                     self.neurons[gene.output] = NN_Neuron(gene.output)
-                self.neurons[gene.output].incoming.append(gene)
+                self.neurons[gene.output].input_genes.append(gene)
                 if gene.input not in self.neurons:
                     self.neurons[gene.input] = NN_Neuron(gene.input)
 
@@ -156,10 +156,10 @@ class NeuralNetwork:
 
         for neuron_id in self.neurons:
             inputs_sum = 0
-            for incoming in self.neurons[neuron_id].incoming:
+            for incoming in self.neurons[neuron_id].input_genes:
                 inputs_sum += incoming.weight * self.neurons[incoming.input].value
 
-            if len(self.neurons[neuron_id].incoming):
+            if len(self.neurons[neuron_id].input_genes):
                 self.neurons[neuron_id].value = steep_sigmoid(inputs_sum)
 
         output = []
@@ -169,6 +169,7 @@ class NeuralNetwork:
         return output
 
     def draw_graph(self, pause=False):
+        # deprecated
         plt.clf()
         G = nx.DiGraph()
 
@@ -188,7 +189,7 @@ class NeuralNetwork:
                 G.add_node(neuron_id, pos=(1, neuron_id), label=str(neuron_id))
 
         for neuron_id, neuron in self.neurons.items():
-            for gene in neuron.incoming:
+            for gene in neuron.input_genes:
                 edge_color = 'black' if gene.enabled else 'gray'
                 G.add_edge(gene.input, gene.output, label=f"{gene.weight:.2f}", color=edge_color)
 

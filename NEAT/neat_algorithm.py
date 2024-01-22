@@ -3,18 +3,13 @@ import random
 
 from NEAT.neat_genome import NeatGenome, ConnectionGene, NeuralNetwork
 
-crossover_rate = 0.8
-connection_mutation_rate = 0.3
-node_mutation_rate = 0.1
-weight_mutation_rate = 0.8
-inherited_gene_disable_rate = 0.75
-weight_perturb_rate = 0.9
+from NEAT.neat_parameters import *
 
 # Used to assign the same innovation number to reoccurring mutations
 # keys are tuples (in_node, out_node), values are innovation numbers
 # e.g. {(1, 2): 1, (2, 3): 2}
 new_connections_this_generation = {}
-new_nodes_this_generation = {}
+new_nodes_this_generation = {}  # niepotrzebne
 
 
 def generate_new_population(count, inputs, outputs, connected=False):
@@ -52,7 +47,8 @@ def reproduce(population):
             parents = random.choices(population, weights=[max(g.fitness, 0.01) for g in population], k=2)
             new_population.append(crossover(parents))
         else:
-            new_population.append(copy.deepcopy(random.choice(population)))
+            to_be_copied = random.choices(population, weights=[max(g.fitness, 0.01) for g in population], k=1)[0]
+            new_population.append(copy.deepcopy(to_be_copied))
 
     types = {}
     for g in new_population:
@@ -121,7 +117,7 @@ def mutate(genome):
 def mutate_weights(genome):
     for gene in genome.connection_genes:
         if random.random() < weight_perturb_rate:
-            gene.weight += random.uniform(0.1, 0.1)
+            gene.weight += random.uniform(-0.1, 0.1)
             gene.weight = min(1, max(-1, gene.weight))
         else:
             gene.weight = random.uniform(-1, 1)

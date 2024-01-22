@@ -1,16 +1,16 @@
 import time
-from NEAT import neat_alg
-from snake import play_game
-from standard_genetic import genetic_alg
+from NEAT import neat_algorithm
+from snake_benchmark import play_game
+from simple_alg import genetic_algorithm
 
 
-def play_game_with_standard(population_size, generations=-1):
+def play_game_with_simple(population_size, generations=-1):
     result_data = {'fields': ['generation', 'best_score', 'avg_score'],
                    'rows': []}
 
     start = time.time()
     inputs = 5 + 1  # 5 inputs + 1 bias
-    population = genetic_alg.generate_new_population(population_size, inputs, 3, True)
+    population = genetic_algorithm.generate_new_population(population_size, inputs, 3)
     i = 0
     best = 0
     # play_game(None, True, 5)
@@ -47,7 +47,7 @@ def play_game_with_standard(population_size, generations=-1):
 
         result_data['rows'].append([i, max_score, avg])
         start = time.time()
-        population = genetic_alg.next_generation(population)
+        population = genetic_algorithm.next_generation(population)
     return result_data
 
 
@@ -57,7 +57,7 @@ def play_game_with_NEAT(population_size, generations=-1, connected=True):
 
     start = time.time()
     inputs = 5 + 1  # 5 inputs + 1 bias
-    population = neat_alg.generate_new_population(population_size, inputs, 3, connected=connected)
+    population = neat_algorithm.generate_new_population(population_size, inputs, 3, connected=connected)
     i = 0
     best = 0
     best_genome = population[0]
@@ -94,8 +94,8 @@ def play_game_with_NEAT(population_size, generations=-1, connected=True):
         avg = avg / len(population)
         end = time.time()
         print(f'took {(end - start):.2f} seconds')
-        print(
-            f'Best score: {max_score} ({len(best_genome_this_gen.nn.neurons)}n, {len(best_genome_this_gen.connection_genes)}c) (best ever {best})')
+        print(f'Best score: {max_score} ({len(best_genome_this_gen.nn.neurons)}n,'
+              f' {len(best_genome_this_gen.connection_genes)}c) (best ever {best})')
         print(f'Average score: {avg:.2f}')
         # print(f'Max nodes: {max_nodes}')
         # print(f'Max connections: {connections}')
@@ -104,7 +104,7 @@ def play_game_with_NEAT(population_size, generations=-1, connected=True):
         draw_graphs = False
         draw_every_n = 1
         if draw_graphs and i % draw_every_n == 0:
-            best_genome_this_gen.nn.draw_graph()
+            best_genome_this_gen.nn.draw_network_graph()
             pass
 
         show_best = False
@@ -112,7 +112,7 @@ def play_game_with_NEAT(population_size, generations=-1, connected=True):
             play_game(best_genome_this_gen.nn, False, 50, f"{i} (best)", (50, 50, 230))
         result_data['rows'].append([i, max_score, avg, max_nodes, connections, species])
         start = time.time()
-        population = neat_alg.next_generation(population)
+        population = neat_algorithm.next_generation(population)
 
     # best_genome.nn.draw_graph()
     result_data['best_genome'] = best_genome
